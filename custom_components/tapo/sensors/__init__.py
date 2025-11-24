@@ -6,8 +6,8 @@ from homeassistant.const import UnitOfPower
 from homeassistant.const import UnitOfTime
 from homeassistant.helpers.typing import StateType
 from plugp100.new.components.energy_component import EnergyComponent
+from plugp100.new.tapodevice import TapoDevice
 
-from custom_components.tapo.coordinators import TapoDataCoordinator
 from custom_components.tapo.sensors.sensor_config import SensorConfig
 from custom_components.tapo.sensors.tapo_sensor_source import TapoSensorSource
 
@@ -21,8 +21,8 @@ class TodayEnergySensorSource(TapoSensorSource):
             UnitOfEnergy.KILO_WATT_HOUR,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
-        if energy := coordinator.device.get_component(EnergyComponent):
+    def get_value(self, device: TapoDevice) -> StateType:
+        if energy := device.get_component(EnergyComponent):
             return energy.energy_info.today_energy / 1000 if energy.energy_info else None
         return None
 
@@ -36,8 +36,8 @@ class MonthEnergySensorSource(TapoSensorSource):
             UnitOfEnergy.KILO_WATT_HOUR,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
-        if energy := coordinator.device.get_component(EnergyComponent):
+    def get_value(self, device: TapoDevice) -> StateType:
+        if energy := device.get_component(EnergyComponent):
             return energy.energy_info.month_energy / 1000 if energy.energy_info else None
         return None
 
@@ -66,9 +66,12 @@ class CurrentEnergySensorSource(TapoSensorSource):
             UnitOfPower.WATT,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
-        if energy := coordinator.device.get_component(EnergyComponent):
-            return energy.energy_info.current_power / 1000 if energy.energy_info else energy.power_info.current_power
+    def get_value(self, device: TapoDevice) -> StateType:
+        if energy := device.get_component(EnergyComponent):
+            if energy.energy_info:
+                return energy.energy_info.current_power / 1000
+            elif energy.power_info:
+                return energy.power_info.current_power
         return None
 
 
@@ -82,9 +85,9 @@ class SignalSensorSource(TapoSensorSource):
             is_diagnostic=True,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
+    def get_value(self, device: TapoDevice) -> StateType:
         try:
-            return coordinator.device.wifi_info.rssi
+            return device.wifi_info.rssi
         except Exception:  # pylint: disable=broad-except
             return 0
 
@@ -98,8 +101,8 @@ class TodayRuntimeSensorSource(TapoSensorSource):
             UnitOfTime.MINUTES,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
-        if energy := coordinator.device.get_component(EnergyComponent):
+    def get_value(self, device: TapoDevice) -> StateType:
+        if energy := device.get_component(EnergyComponent):
             return energy.energy_info.today_runtime if energy.energy_info else None
         return None
 
@@ -113,7 +116,7 @@ class MonthRuntimeSensorSource(TapoSensorSource):
             UnitOfTime.MINUTES,
         )
 
-    def get_value(self, coordinator: TapoDataCoordinator) -> StateType:
-        if energy := coordinator.device.get_component(EnergyComponent):
+    def get_value(self, device: TapoDevice) -> StateType:
+        if energy := device.get_component(EnergyComponent):
             return energy.energy_info.month_runtime if energy.energy_info else None
         return None

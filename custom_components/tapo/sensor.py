@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from plugp100.new.components.energy_component import EnergyComponent
 from plugp100.new.tapodevice import TapoDevice
+from plugp100.new.tapoplug import TapoPlug
 
 from custom_components.tapo.const import DOMAIN
 from custom_components.tapo.coordinators import HassTapoDeviceData
@@ -57,6 +58,16 @@ def _setup_from_coordinator(
         sensors.extend(
             [TapoSensor(coordinator, coordinator.device, factory()) for factory in SUPPORTED_ENERGY_SENSOR]
         )
+
+    # Add per-socket energy sensors for power strips (e.g., P304M)
+    device = coordinator.device
+    if isinstance(device, TapoPlug) and device.is_strip:
+        for socket in device.sockets:
+            if socket.has_component(EnergyComponent):
+                sensors.extend(
+                    [TapoSensor(coordinator, socket, factory()) for factory in SUPPORTED_ENERGY_SENSOR]
+                )
+
     async_add_entities(sensors, True)
 
 
@@ -95,4 +106,4 @@ class TapoSensor(CoordinatedTapoEntity, SensorEntity):
 
     @property
     def native_value(self) -> Union[StateType, date, datetime]:
-        return self._sensor_source.get_value(self.coordinator)
+        return self._sensor_source.get_value(self.device)
